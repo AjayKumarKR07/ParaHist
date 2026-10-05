@@ -71,4 +71,42 @@ export const api = {
     method: 'PUT',
     body: JSON.stringify(preferences),
   }),
+
+  // PDF Report Download
+  downloadPdfReport: async (customMetrics = {}) => {
+    const token = localStorage.getItem('parahist_token');
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+
+    const res = await fetch(`${BASE_URL}/report/pdf`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(customMetrics),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.error || errJson.message || 'Unable to generate report. Please try again.');
+    }
+
+    const blob = await res.blob();
+    const dateStr = new Date().toISOString().split('T')[0];
+    const filename = `ParaHist_Experiment_Report_${dateStr}.pdf`;
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    return { success: true, filename };
+  },
+
+  // PostgreSQL Experiment History
+  getExperiments: () => request('/experiments'),
+  getExperimentDetails: (id) => request(`/experiments/${id}`),
 };

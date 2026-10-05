@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-﻿# ── Dataset (do not upload large CSV to GitHub) ───────────────────────────────
+# ── Dataset (do not upload large CSV to GitHub) ───────────────────────────────
 dataset/
 
 # ── Build output ──────────────────────────────────────────────────────────────
@@ -50,73 +49,29 @@ frontend/dist/
 backend/.env
 .env
 npm-debug.log*
-=======
+
 # Prerequisites
 *.d
-
-# Compiled Object files
 *.slo
 *.lo
-*.o
-*.obj
-
-# Precompiled Headers
 *.gch
 *.pch
-
-# Linker files
 *.ilk
-
-# Debugger Files
 *.pdb
-
-# Compiled Dynamic libraries
 *.so
 *.dylib
 *.dll
 *.so.*
-
-# Fortran module files
 *.mod
 *.smod
-
-# Compiled Static libraries
 *.lai
 *.la
 *.a
 *.lib
-
-# Executables
-*.exe
-*.out
-*.app
-
-# Build directories
-build/
-Build/
-build-*/
-
-# CMake generated files
-CMakeFiles/
-CMakeCache.txt
-cmake_install.cmake
-Makefile
-install_manifest.txt
-compile_commands.json
-
-# Temporary files
 *.tmp
 *.log
 *.bak
-*.swp
-
-# vcpkg
 vcpkg_installed/
-
-# debug information files
 *.dwo
-
-# test output & cache
 Testing/
 .cache/
->>>>>>> 9122f809fe2d068d45ca61ed297698c24d8899e3

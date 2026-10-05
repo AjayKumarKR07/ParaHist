@@ -16,11 +16,15 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 
-const systemRoutes    = require("./routes/systemRoutes");
-const datasetRoutes   = require("./routes/datasetRoutes");
-const histogramRoutes = require("./routes/histogramRoutes");
-const benchmarkRoutes = require("./routes/benchmarkRoutes");
-const authRoutes      = require("./routes/authRoutes");
+const systemRoutes     = require("./routes/systemRoutes");
+const datasetRoutes    = require("./routes/datasetRoutes");
+const histogramRoutes  = require("./routes/histogramRoutes");
+const benchmarkRoutes  = require("./routes/benchmarkRoutes");
+const authRoutes       = require("./routes/authRoutes");
+const reportRoutes     = require("./routes/reportRoutes");
+const experimentRoutes = require("./routes/experimentRoutes");
+const { testConnection } = require("./config/database");
+const { initDatabase }   = require("./config/initDatabase");
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
@@ -66,11 +70,13 @@ app.get("/api/health", (req, res) => {
 });
 
 // ── Routes ─────────────────────────────────────────────────────────────────────
-app.use("/api/auth",      authRoutes);
-app.use("/api/system",    systemRoutes);
-app.use("/api/dataset",   datasetRoutes);
-app.use("/api/histogram", histogramRoutes);
-app.use("/api/benchmark", benchmarkRoutes);
+app.use("/api/auth",        authRoutes);
+app.use("/api/system",      systemRoutes);
+app.use("/api/dataset",     datasetRoutes);
+app.use("/api/histogram",   histogramRoutes);
+app.use("/api/benchmark",   benchmarkRoutes);
+app.use("/api/report",      reportRoutes);
+app.use("/api/experiments", experimentRoutes);
 
 // ── 404 handler ────────────────────────────────────────────────────────────────
 app.use((req, res) => {
@@ -96,14 +102,21 @@ app.use((err, req, res, next) => {
 });
 
 // ── Start ──────────────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`\n╔══════════════════════════════════════╗`);
   console.log(`║   ParaHist API — Listening on :${PORT}  ║`);
   console.log(`╚══════════════════════════════════════╝`);
-  console.log(`  Health:    http://localhost:${PORT}/api/health`);
-  console.log(`  Dataset:   http://localhost:${PORT}/api/dataset`);
-  console.log(`  Histogram: http://localhost:${PORT}/api/histogram`);
-  console.log(`  Benchmark: http://localhost:${PORT}/api/benchmark\n`);
+  console.log(`  Health:      http://localhost:${PORT}/api/health`);
+  console.log(`  Dataset:     http://localhost:${PORT}/api/dataset`);
+  console.log(`  Histogram:   http://localhost:${PORT}/api/histogram`);
+  console.log(`  Benchmark:   http://localhost:${PORT}/api/benchmark`);
+  console.log(`  Experiments: http://localhost:${PORT}/api/experiments\n`);
+
+  // Verify PostgreSQL connection and initialize schema
+  const isConnected = await testConnection();
+  if (isConnected) {
+    await initDatabase();
+  }
 });
 
 module.exports = app;

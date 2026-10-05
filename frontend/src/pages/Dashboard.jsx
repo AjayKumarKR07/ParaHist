@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Database, Cpu, Zap, BarChart2, Play, Activity, Compass,
-  Sliders, Terminal, Scale, ShieldCheck, ArrowRight, Sparkles
+  Sliders, Terminal, Scale, ShieldCheck, ArrowRight, Sparkles,
+  FileText, Check, Loader2, AlertCircle
 } from 'lucide-react';
 import StatCard from '../components/StatCard';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -19,6 +20,31 @@ export default function Dashboard() {
   const [histogram, setHistogram] = useState(null);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState(null);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [pdfSuccess, setPdfSuccess]       = useState(false);
+  const [pdfError, setPdfError]           = useState(null);
+
+  async function handleDownloadPdf() {
+    setGeneratingPdf(true);
+    setPdfError(null);
+    try {
+      const customMetrics = histogram ? {
+        threads: histogram.threads,
+        sequentialMs: histogram.sequentialMs,
+        parallelMs: histogram.parallelMs,
+        speedup: histogram.speedup,
+        efficiency: histogram.efficiency
+      } : {};
+      await api.downloadPdfReport(customMetrics);
+      setPdfSuccess(true);
+      setTimeout(() => setPdfSuccess(false), 4000);
+    } catch (err) {
+      setPdfError(err.message || 'Unable to generate report. Please try again.');
+      setTimeout(() => setPdfError(null), 5000);
+    } finally {
+      setGeneratingPdf(false);
+    }
+  }
 
   useEffect(() => {
     async function load() {
@@ -75,21 +101,62 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <button
-          onClick={replayTour}
-          className="btn btn-secondary"
-          style={{
-            borderColor: 'rgba(59,130,246,0.4)',
-            color: 'var(--accent-light)',
-            background: 'rgba(59,130,246,0.08)',
-            fontWeight: 600,
-            gap: '0.5rem',
-            padding: '0.55rem 1rem'
-          }}
-        >
-          <Compass size={16} /> Replay Guided Tour
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button
+            id="dashboard-download-report-btn"
+            className="btn btn-secondary"
+            disabled={generatingPdf}
+            onClick={handleDownloadPdf}
+            style={{
+              padding: '0.55rem 1rem',
+              fontWeight: 600,
+              fontSize: '0.88rem',
+              gap: '0.45rem',
+              borderColor: pdfSuccess ? 'var(--green)' : 'rgba(59,130,246,0.3)',
+              color: pdfSuccess ? 'var(--green)' : 'var(--accent-light)',
+              background: pdfSuccess ? 'rgba(34,197,94,0.1)' : 'rgba(59,130,246,0.08)',
+            }}
+          >
+            {generatingPdf ? (
+              <>
+                <Loader2 size={15} className="animate-spin" />
+                <span>Generating...</span>
+              </>
+            ) : pdfSuccess ? (
+              <>
+                <Check size={15} />
+                <span>✓ Report Ready</span>
+              </>
+            ) : (
+              <>
+                <FileText size={15} />
+                <span>Download Latest Report</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={replayTour}
+            className="btn btn-secondary"
+            style={{
+              borderColor: 'rgba(59,130,246,0.4)',
+              color: 'var(--accent-light)',
+              background: 'rgba(59,130,246,0.08)',
+              fontWeight: 600,
+              gap: '0.5rem',
+              padding: '0.55rem 1rem'
+            }}
+          >
+            <Compass size={16} /> Replay Guided Tour
+          </button>
+        </div>
       </div>
+
+      {pdfError && (
+        <div style={{ color: 'var(--red)', background: 'rgba(239,68,68,0.1)', borderRadius: 8, padding: '0.85rem 1.15rem', marginBottom: '1.5rem', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertCircle size={16} /> {pdfError}
+        </div>
+      )}
 
       {loading && <LoadingSpinner text="Connecting to laboratory services..." />}
       {error && (

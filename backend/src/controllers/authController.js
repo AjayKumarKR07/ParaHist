@@ -63,7 +63,7 @@ const authController = {
       }
 
       // 4. Check if email already exists
-      const existingUser = User.findByEmail(email);
+      const existingUser = await User.findByEmail(email);
       if (existingUser) {
         return res.status(400).json({
           success: false,
@@ -102,7 +102,7 @@ const authController = {
       }
 
       // 2. Find user by email
-      const user = User.findByEmail(email);
+      const user = await User.findByEmail(email);
       if (!user) {
         return res.status(401).json({
           success: false,
@@ -149,7 +149,7 @@ const authController = {
   async me(req, res) {
     try {
       // req.user is guaranteed by requireAuth
-      const freshUser = User.findById(req.userId) || req.user;
+      const freshUser = (await User.findById(req.userId)) || req.user;
       return res.json({
         success: true,
         user: User.sanitize(freshUser),
@@ -166,7 +166,7 @@ const authController = {
       const { name, email } = req.body || {};
 
       // Verify user identity strictly from req.userId (never trust client payload IDs)
-      const user = User.findById(req.userId);
+      const user = await User.findById(req.userId);
       if (!user) {
         return res.status(404).json({ success: false, message: 'User not found.' });
       }
@@ -194,7 +194,7 @@ const authController = {
         });
       }
 
-      const updatedUser = User.updateProfile(req.userId, { name: name.trim() });
+      const updatedUser = await User.updateProfile(req.userId, { name: name.trim() });
       if (!updatedUser) {
         return res.status(500).json({ success: false, message: 'Failed to update profile.' });
       }
@@ -222,7 +222,7 @@ const authController = {
         });
       }
 
-      const user = User.findById(req.userId);
+      const user = await User.findById(req.userId);
       if (!user) {
         return res.status(404).json({ success: false, message: 'User not found.' });
       }
@@ -282,7 +282,7 @@ const authController = {
   // GET /api/auth/preferences — Fetch user preferences
   async getPreferences(req, res) {
     try {
-      const user = User.findById(req.userId);
+      const user = await User.findById(req.userId);
       if (!user) {
         return res.status(404).json({ success: false, message: 'User not found.' });
       }
@@ -344,7 +344,7 @@ const authController = {
         }
       }
 
-      const updatedUser = User.updatePreferences(req.userId, cleanPrefs);
+      const updatedUser = await User.updatePreferences(req.userId, cleanPrefs);
       if (!updatedUser) {
         return res.status(500).json({ success: false, message: 'Failed to update preferences.' });
       }

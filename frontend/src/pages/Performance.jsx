@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import {
   Cpu, RefreshCw, Play, CheckCircle, Zap, Activity, Clock,
-  Sliders, TrendingUp, Info, BarChart2
+  Sliders, TrendingUp, Info, BarChart2, FileText, Check, Loader2, AlertCircle, History
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -18,21 +18,29 @@ import { api } from '../services/api';
 export default function Performance() {
   const [benchmark, setBenchmark] = useState(null);
   const [histogram, setHistogram] = useState(null);
+  const [experiments, setExperiments] = useState([]);
   const [loading, setLoading]     = useState(true);
   const [running, setRunning]     = useState(false);
   const [result, setResult]       = useState(null);
   const [error, setError]         = useState(null);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [pdfSuccess, setPdfSuccess]       = useState(false);
+  const [pdfError, setPdfError]           = useState(null);
 
   async function loadData() {
     setLoading(true);
     setError(null);
     try {
-      const [bm, hist] = await Promise.allSettled([
+      const [bm, hist, expRes] = await Promise.allSettled([
         api.getBenchmark(),
         api.getHistogram(),
+        api.getExperiments(),
       ]);
       if (bm.status === 'fulfilled')   setBenchmark(bm.value);
       if (hist.status === 'fulfilled') setHistogram(hist.value);
+      if (expRes.status === 'fulfilled' && expRes.value?.experiments) {
+        setExperiments(expRes.value.experiments);
+      }
     } catch (e) {
       setError(e.message);
     } finally {
@@ -56,6 +64,33 @@ export default function Performance() {
       setError(e.message);
     } finally {
       setRunning(false);
+    }
+  }
+
+  async function handleDownloadPdf() {
+    setGeneratingPdf(true);
+    setPdfError(null);
+    setPdfSuccess(false);
+
+    try {
+      // Pass real measured metrics from current execution
+      const customMetrics = {
+        threads,
+        sequentialMs: seqMs,
+        parallelMs: parMs,
+        speedup,
+        efficiency,
+        correctness: histogram?.correctness !== undefined ? histogram.correctness : true,
+      };
+
+      await api.downloadPdfReport(customMetrics);
+      setPdfSuccess(true);
+      setTimeout(() => setPdfSuccess(false), 4000);
+    } catch (err) {
+      setPdfError(err.message || 'Unable to generate report. Please try again.');
+      setTimeout(() => setPdfError(null), 5000);
+    } finally {
+      setGeneratingPdf(false);
     }
   }
 
@@ -115,6 +150,38 @@ export default function Performance() {
           </button>
 
           <button
+            id="download-pdf-report-btn"
+            className="btn btn-secondary"
+            disabled={generatingPdf}
+            onClick={handleDownloadPdf}
+            style={{
+              padding: '0.65rem 1.25rem',
+              fontWeight: 600,
+              gap: '0.45rem',
+              borderColor: pdfSuccess ? 'var(--green)' : 'rgba(59,130,246,0.3)',
+              color: pdfSuccess ? 'var(--green)' : 'var(--accent-light)',
+              background: pdfSuccess ? 'rgba(34,197,94,0.1)' : 'rgba(59,130,246,0.08)',
+            }}
+          >
+            {generatingPdf ? (
+              <>
+                <Loader2 size={15} className="animate-spin" />
+                <span>Generating Report...</span>
+              </>
+            ) : pdfSuccess ? (
+              <>
+                <Check size={15} />
+                <span>✓ Report Generated</span>
+              </>
+            ) : (
+              <>
+                <FileText size={15} />
+                <span>Download PDF Report</span>
+              </>
+            )}
+          </button>
+
+          <button
             className="btn btn-primary"
             disabled={running}
             onClick={handleRunBenchmark}
@@ -128,6 +195,12 @@ export default function Performance() {
           </button>
         </div>
       </div>
+
+      {pdfError && (
+        <div style={{ color: 'var(--red)', background: 'rgba(239,68,68,0.1)', borderRadius: 8, padding: '0.85rem 1.15rem', marginBottom: '1.5rem', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertCircle size={16} /> {pdfError}
+        </div>
+      )}
 
       {error && (
         <div style={{ color: 'var(--red)', background: 'rgba(239,68,68,0.1)', borderRadius: 8, padding: '0.85rem 1.15rem', marginBottom: '1.5rem', fontSize: '0.88rem' }}>
@@ -223,6 +296,82 @@ export default function Performance() {
         </div>
       </div>
 
+      {/* ── DEDICATED REPORT CARD BLOCK (OPTION B) ──────────────────────────── */}
+      <div
+        className="card"
+        style={{
+          padding: '1.5rem 1.75rem',
+          marginBottom: '2rem',
+          background: 'linear-gradient(135deg, var(--bg-card) 0%, rgba(59,130,246,0.05) 100%)',
+          border: '1px solid rgba(59,130,246,0.25)',
+          borderRadius: 12,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '1.25rem'
+        }}
+      >
+        <div style={{ maxWidth: 650 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '0.2rem 0.55rem',
+              borderRadius: 4,
+              background: 'rgba(59,130,246,0.15)',
+              color: 'var(--accent-light)',
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em'
+            }}>
+              <FileText size={12} /> Academic Publication Format
+            </span>
+          </div>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>
+            Download Official Experiment Report
+          </h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: 0, lineHeight: 1.5 }}>
+            Generate a publication-ready 3-page academic report with benchmark summary, correctness proof, and 256-bin histogram vector visualization.
+          </p>
+        </div>
+
+        <button
+          className="btn btn-secondary"
+          disabled={generatingPdf}
+          onClick={handleDownloadPdf}
+          style={{
+            padding: '0.75rem 1.4rem',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            gap: '0.5rem',
+            borderColor: pdfSuccess ? 'var(--green)' : 'rgba(59,130,246,0.4)',
+            color: pdfSuccess ? 'var(--green)' : 'var(--accent-light)',
+            background: pdfSuccess ? 'rgba(34,197,94,0.12)' : 'rgba(59,130,246,0.12)',
+            flexShrink: 0
+          }}
+        >
+          {generatingPdf ? (
+            <>
+              <Loader2 size={16} className="animate-spin" />
+              <span>Generating Report...</span>
+            </>
+          ) : pdfSuccess ? (
+            <>
+              <Check size={16} />
+              <span>✓ Report Generated</span>
+            </>
+          ) : (
+            <>
+              <FileText size={16} />
+              <span>Download PDF Report</span>
+            </>
+          )}
+        </button>
+      </div>
+
       {/* ── 2. EXECUTION TIME COMPARISON ────────────────────────────────────── */}
       {comparisonData.length > 0 && (
         <div className="card" style={{ padding: '1.75rem', marginBottom: '2rem' }}>
@@ -312,7 +461,7 @@ export default function Performance() {
             </div>
 
             {/* Summary Table */}
-            <div id="performance-table-card" className="card" style={{ padding: '1.5rem' }}>
+            <div id="performance-table-card" className="card" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
               <div className="section-title"><BarChart2 size={16} color="var(--accent)" />Benchmark Scalability Data (1, 2, 4, 8, 16 Threads)</div>
               <ThreadTable data={summary} />
 
@@ -324,6 +473,78 @@ export default function Performance() {
                 </div>
               )}
             </div>
+
+            {/* ── EXPERIMENT HISTORY (POSTGRESQL PERSISTENT STORE) ── */}
+            {experiments.length > 0 && (
+              <div className="card" style={{ padding: '1.75rem', marginBottom: '2rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <History size={18} color="var(--cyan)" />
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                      EXPERIMENT HISTORY
+                    </h3>
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    {experiments.length} runs recorded in PostgreSQL
+                  </span>
+                </div>
+
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
+                        <th style={{ padding: '0.75rem 0.5rem', color: 'var(--text-muted)', fontWeight: 600 }}>Date / Time</th>
+                        <th style={{ padding: '0.75rem 0.5rem', color: 'var(--text-muted)', fontWeight: 600 }}>Threads</th>
+                        <th style={{ padding: '0.75rem 0.5rem', color: 'var(--text-muted)', fontWeight: 600 }}>Sequential</th>
+                        <th style={{ padding: '0.75rem 0.5rem', color: 'var(--text-muted)', fontWeight: 600 }}>Parallel</th>
+                        <th style={{ padding: '0.75rem 0.5rem', color: 'var(--text-muted)', fontWeight: 600 }}>Speedup</th>
+                        <th style={{ padding: '0.75rem 0.5rem', color: 'var(--text-muted)', fontWeight: 600 }}>Efficiency</th>
+                        <th style={{ padding: '0.75rem 0.5rem', color: 'var(--text-muted)', fontWeight: 600 }}>Result</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {experiments.map((exp) => (
+                        <tr key={exp.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ padding: '0.75rem 0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                            {new Date(exp.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                          <td style={{ padding: '0.75rem 0.5rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                            {exp.threads}T
+                          </td>
+                          <td style={{ padding: '0.75rem 0.5rem', color: '#3b82f6', fontFamily: 'JetBrains Mono, monospace' }}>
+                            {exp.sequentialMs != null ? `${exp.sequentialMs.toFixed(2)} ms` : '—'}
+                          </td>
+                          <td style={{ padding: '0.75rem 0.5rem', color: '#22c55e', fontFamily: 'JetBrains Mono, monospace' }}>
+                            {exp.parallelMs != null ? `${exp.parallelMs.toFixed(2)} ms` : '—'}
+                          </td>
+                          <td style={{ padding: '0.75rem 0.5rem', fontWeight: 700, color: 'var(--cyan)' }}>
+                            {exp.speedup != null ? `${exp.speedup.toFixed(2)}×` : '—'}
+                          </td>
+                          <td style={{ padding: '0.75rem 0.5rem', color: 'var(--purple)' }}>
+                            {exp.efficiency != null ? `${exp.efficiency.toFixed(1)}%` : '—'}
+                          </td>
+                          <td style={{ padding: '0.75rem 0.5rem' }}>
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              padding: '0.15rem 0.5rem',
+                              borderRadius: 4,
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              background: exp.correctness ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
+                              color: exp.correctness ? 'var(--green)' : 'var(--red)',
+                            }}>
+                              {exp.correctness ? 'PASS' : 'FAIL'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

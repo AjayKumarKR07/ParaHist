@@ -4,8 +4,9 @@ const {
   getHistogram,
   runHistogramComputation,
 } = require("../controllers/histogramController");
+const { optionalAuth } = require("../middleware/authMiddleware");
 
 router.get("/", getHistogram);
-router.post("/run", runHistogramComputation);
+router.post("/run", optionalAuth, runHistogramComputation);
 
 module.exports = router;

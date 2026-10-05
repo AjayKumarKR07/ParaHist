@@ -4,7 +4,7 @@ const User = require('../models/User');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'parahist_secure_session_secret_key_2026';
 
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -39,7 +39,7 @@ function requireAuth(req, res, next) {
       });
     }
 
-    const user = User.findById(decoded.id);
+    const user = await User.findById(decoded.id);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -60,7 +60,34 @@ function requireAuth(req, res, next) {
   }
 }
 
+async function optionalAuth(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      if (token) {
+        try {
+          const decoded = jwt.verify(token, JWT_SECRET);
+          if (decoded && decoded.id) {
+            const user = await User.findById(decoded.id);
+            if (user) {
+              req.user = user;
+              req.userId = user.id;
+            }
+          }
+        } catch {
+          // Token invalid, ignore silently for optional auth
+        }
+      }
+    }
+  } catch {
+    // Ignore error
+  }
+  next();
+}
+
 module.exports = {
   requireAuth,
+  optionalAuth,
   JWT_SECRET,
 };

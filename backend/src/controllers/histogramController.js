@@ -2,6 +2,7 @@
 const fs   = require("fs");
 const path = require("path");
 const { resolveResultsDir, runHistogram } = require("../services/cppRunner");
+const { query } = require("../config/database");
 
 const EXPECTED_BINS        = 256;
 const EXPECTED_TOTAL_PIXELS = 42000 * 784; // 32,928,000
@@ -157,6 +158,68 @@ const runHistogramComputation = async (req, res) => {
     const eff     = result.stdout.match(/Efficiency\s+:\s+([\d.]+)/)?.[1];
     const correct = /Histogram correctness:\s*PASS/i.test(result.stdout);
 
+    // Save experiment execution and 256 bins to PostgreSQL
+    let experimentId = null;
+    try {
+      const resultsDir = resolveResultsDir();
+      const seqFile = path.join(resultsDir, "histogram_seq.csv");
+      const parFile = path.join(resultsDir, "histogram_par.csv");
+
+      if (fs.existsSync(seqFile) && fs.existsSync(parFile)) {
+        const seqBins = parseHistogramCsv(seqFile);
+        const parBins = parseHistogramCsv(parFile);
+        const val = validateHistograms(seqBins, parBins);
+        const seqMost = mostFrequent(seqBins);
+
+        const expRes = await query(
+          `INSERT INTO experiments (
+            user_id, threads, sequential_ms, parallel_ms, speedup, efficiency,
+            correctness, mismatched_bins, sequential_total, parallel_total,
+            expected_total, bin_count, most_frequent_pixel, most_frequent_count, created_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
+          RETURNING id;`,
+          [
+            req.userId || null,
+            threadCount,
+            seqMs ? parseFloat(seqMs) : null,
+            parMs ? parseFloat(parMs) : null,
+            speedup ? parseFloat(speedup) : null,
+            eff ? parseFloat(eff) : null,
+            correct,
+            val.mismatchedBins.length,
+            val.seqTotal,
+            val.parTotal,
+            EXPECTED_TOTAL_PIXELS,
+            EXPECTED_BINS,
+            seqMost.pixel,
+            seqMost.frequency,
+          ]
+        );
+
+        if (expRes.rows && expRes.rows.length > 0) {
+          experimentId = expRes.rows[0].id;
+
+          // Batch insert 256 bins into experiment_histogram
+          if (seqBins.length === EXPECTED_BINS && parBins.length === EXPECTED_BINS) {
+            const values = [];
+            const placeholders = [];
+            let pIdx = 1;
+            for (let i = 0; i < EXPECTED_BINS; i++) {
+              placeholders.push(`($${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++})`);
+              values.push(experimentId, i, seqBins[i].frequency, parBins[i].frequency);
+            }
+            await query(
+              `INSERT INTO experiment_histogram (experiment_id, pixel_value, sequential_count, parallel_count)
+               VALUES ${placeholders.join(', ')};`,
+              values
+            );
+          }
+        }
+      }
+    } catch (dbErr) {
+      console.warn('[histogramController] Notice: Unable to persist to PostgreSQL:', dbErr.message);
+    }
+
     res.json({
       status:          "completed",
       threads:         threadCount,
@@ -166,6 +229,7 @@ const runHistogramComputation = async (req, res) => {
       parallelMs:      parMs ? parseFloat(parMs) : null,
       speedup:         speedup ? parseFloat(speedup) : null,
       efficiency:      eff ? parseFloat(eff) : null,
+      experimentId,
     });
   } catch (err) {
     console.error("[histogramController] Error:", err.message);
