@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿# ParaHist — Parallel Histogram Generation Using OpenMP
 
 > **College Mini-Project | Parallel Computing**  
@@ -230,3 +231,7 @@ double t_end = omp_get_wtime();
 
 **Ajay Kumar K R**  
 College Parallel Computing Mini-Project, 2026
+=======
+# ParaHist
+Parallel histogram generation using OpenMP and the MNIST dataset with performance analysis.
+>>>>>>> 9122f809fe2d068d45ca61ed297698c24d8899e3
