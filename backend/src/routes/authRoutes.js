@@ -1,15 +1,18 @@
-// authRoutes.js — Express router for authentication
+// authRoutes.js — Express router for authentication and account management
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
+const { requireAuth } = require('../middleware/authMiddleware');
 
-// Registration route
+// Public routes
 router.post('/register', authController.register);
-
-// Login route
 router.post('/login', authController.login);
 
-// Current user profile verification
-router.get('/me', authController.me);
+// Protected routes (Require valid JWT)
+router.get('/me', requireAuth, authController.me);
+router.put('/profile', requireAuth, authController.updateProfile);
+router.put('/password', requireAuth, authController.updatePassword);
+router.get('/preferences', requireAuth, authController.getPreferences);
+router.put('/preferences', requireAuth, authController.updatePreferences);
 
 module.exports = router;

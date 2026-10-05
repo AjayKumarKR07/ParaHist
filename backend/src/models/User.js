@@ -7,6 +7,23 @@ const bcrypt = require('bcryptjs');
 const DATA_DIR = path.join(__dirname, '../../data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 
+// Default user preferences for ParaHist laboratory
+function getDefaultPreferences() {
+  return {
+    theme: 'dark',
+    defaultThreads: 8,
+    defaultHistogramMode: 'both',
+    guidedTour: true,
+    notifications: {
+      experimentCompleted: true,
+      benchmarkCompleted: true,
+      correctnessResult: true,
+      systemMessages: true,
+      emailNotifications: false,
+    },
+  };
+}
+
 // Ensure data directory and users.json file exist
 function ensureStorage() {
   if (!fs.existsSync(DATA_DIR)) {
@@ -29,7 +46,7 @@ function getAllUsers() {
   }
 }
 
-// Save all users to disk safely
+// Save all users to disk safely (atomic write via temp file)
 function saveAllUsers(users) {
   ensureStorage();
   const tmpFile = USERS_FILE + '.tmp';
@@ -39,6 +56,8 @@ function saveAllUsers(users) {
 
 // User helper methods
 const User = {
+  getDefaultPreferences,
+
   // Find a user by lowercase email
   findByEmail(email) {
     if (!email) return null;
@@ -54,7 +73,7 @@ const User = {
     return users.find(u => u.id === id) || null;
   },
 
-  // Create a new user with hashed password
+  // Create a new user with hashed password and default preferences
   async create({ name, email, password }) {
     ensureStorage();
     const cleanName = String(name).trim();
@@ -69,7 +88,9 @@ const User = {
       name: cleanName,
       email: cleanEmail,
       password: hashedPassword,
+      role: 'Student',
       createdAt: new Date().toISOString(),
+      preferences: getDefaultPreferences(),
     };
 
     const users = getAllUsers();
@@ -85,11 +106,74 @@ const User = {
     return bcrypt.compare(candidatePassword, hashedPassword);
   },
 
-  // Sanitize user object to never expose password
+  // Update profile fields (e.g., name)
+  updateProfile(id, { name }) {
+    if (!id) return null;
+    const users = getAllUsers();
+    const idx = users.findIndex(u => u.id === id);
+    if (idx === -1) return null;
+
+    if (name && typeof name === 'string' && name.trim().length > 0) {
+      users[idx].name = name.trim();
+    }
+
+    saveAllUsers(users);
+    return User.sanitize(users[idx]);
+  },
+
+  // Update user password with pre-hashed password
+  async updatePassword(id, newHashedPassword) {
+    if (!id || !newHashedPassword) return false;
+    const users = getAllUsers();
+    const idx = users.findIndex(u => u.id === id);
+    if (idx === -1) return false;
+
+    users[idx].password = newHashedPassword;
+    saveAllUsers(users);
+    return true;
+  },
+
+  // Update user laboratory preferences
+  updatePreferences(id, newPrefs = {}) {
+    if (!id) return null;
+    const users = getAllUsers();
+    const idx = users.findIndex(u => u.id === id);
+    if (idx === -1) return null;
+
+    const currentPrefs = users[idx].preferences || getDefaultPreferences();
+    const mergedNotifications = {
+      ...(currentPrefs.notifications || getDefaultPreferences().notifications),
+      ...(newPrefs.notifications || {}),
+    };
+
+    users[idx].preferences = {
+      ...currentPrefs,
+      ...newPrefs,
+      notifications: mergedNotifications,
+    };
+
+    saveAllUsers(users);
+    return User.sanitize(users[idx]);
+  },
+
+  // Sanitize user object to never expose password and ensure backwards compatibility
   sanitize(user) {
     if (!user) return null;
     const { password, ...safeUser } = user;
-    return safeUser;
+    const defaults = getDefaultPreferences();
+    return {
+      ...safeUser,
+      role: safeUser.role || 'Student',
+      createdAt: safeUser.createdAt || new Date().toISOString(),
+      preferences: {
+        ...defaults,
+        ...(safeUser.preferences || {}),
+        notifications: {
+          ...defaults.notifications,
+          ...((safeUser.preferences && safeUser.preferences.notifications) || {}),
+        },
+      },
+    };
   },
 };
 

@@ -41,7 +41,7 @@ export const api = {
     body: JSON.stringify({ maxThreads }),
   }),
 
-  // Authentication endpoints
+  // Authentication & Account endpoints
   register: (data) => request('/auth/register', {
     method: 'POST',
     body: JSON.stringify(data),
@@ -52,5 +52,23 @@ export const api = {
     body: JSON.stringify(credentials),
   }),
 
-  getMe: () => request('/auth/me'),
+  getMe:          () => request('/auth/me'),
+  getCurrentUser: () => request('/auth/me'),
+
+  updateProfile: (data) => request('/auth/profile', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+
+  changePassword: (data) => request('/auth/password', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+
+  getPreferences: () => request('/auth/preferences'),
+
+  updatePreferences: (preferences) => request('/auth/preferences', {
+    method: 'PUT',
+    body: JSON.stringify(preferences),
+  }),
 };

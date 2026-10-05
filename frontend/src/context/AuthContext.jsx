@@ -63,6 +63,35 @@ export function AuthProvider({ children }) {
     return await api.register({ name, email, password });
   }, []);
 
+  // Update user state handler (used after profile/preferences edits)
+  const updateUser = useCallback((updatedUserData) => {
+    if (!updatedUserData) return;
+    setUser(prev => {
+      const merged = { ...prev, ...updatedUserData };
+      try {
+        localStorage.setItem(USER_KEY, JSON.stringify(merged));
+      } catch (e) {
+        console.warn('Failed to persist user updates:', e);
+      }
+      return merged;
+    });
+  }, []);
+
+  // Refresh user data from backend
+  const refreshUser = useCallback(async () => {
+    try {
+      const res = await api.getCurrentUser();
+      if (res && res.success && res.user) {
+        setUser(res.user);
+        localStorage.setItem(USER_KEY, JSON.stringify(res.user));
+        return res.user;
+      }
+    } catch (e) {
+      console.warn('Failed to refresh user profile:', e);
+    }
+    return null;
+  }, []);
+
   // Logout handler
   const logout = useCallback(() => {
     setToken(null);
@@ -83,6 +112,8 @@ export function AuthProvider({ children }) {
         login,
         register,
         logout,
+        updateUser,
+        refreshUser,
       }}
     >
       {children}

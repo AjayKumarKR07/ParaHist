@@ -18,7 +18,20 @@
     "name": "Ajay",
     "email": "ajaykumarkr@gmail.com",
     "password": "$2b$10$Zlsbe2t7v0AVn7shVUt5MehYt5bZF0ZnfAfTU2DoM1xHnjtkoiLn6",
-    "createdAt": "2026-10-05T16:15:01.333Z"
+    "createdAt": "2026-10-05T16:15:01.333Z",
+    "preferences": {
+      "theme": "dark",
+      "defaultThreads": 8,
+      "defaultHistogramMode": "both",
+      "guidedTour": true,
+      "notifications": {
+        "experimentCompleted": true,
+        "benchmarkCompleted": true,
+        "correctnessResult": true,
+        "systemMessages": true,
+        "emailNotifications": true
+      }
+    }
   },
   {
     "id": "343b7925-a9b7-4945-84a4-f01892fa1a9a",
@@ -33,5 +46,26 @@
     "email": "test@example.com",
     "password": "$2b$10$hp1tL4ToXjOg8C1yLwLoFeSqOmicG6ttz8vHWmnPvzE88Mucaz5lq",
     "createdAt": "2026-10-05T16:58:17.567Z"
+  },
+  {
+    "id": "d53c7346-4c12-495d-94a7-0b4ebb90c173",
+    "name": "Account Tester Updated",
+    "email": "account_test_1791222163499@example.com",
+    "password": "$2b$10$aYNi10.2hW5IkOh5tatxquKEKNFfdYYbQ9lPKUvTa3qNsl8bcR4iu",
+    "role": "Student",
+    "createdAt": "2026-10-05T17:42:43.594Z",
+    "preferences": {
+      "theme": "light",
+      "defaultThreads": 4,
+      "defaultHistogramMode": "parallel",
+      "guidedTour": true,
+      "notifications": {
+        "experimentCompleted": false,
+        "benchmarkCompleted": true,
+        "correctnessResult": true,
+        "systemMessages": true,
+        "emailNotifications": true
+      }
+    }
   }
 ]
