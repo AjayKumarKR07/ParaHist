@@ -1,0 +1,96 @@
+// User.js — Clean, persistent JSON-backed User model
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
+
+const DATA_DIR = path.join(__dirname, '../../data');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+
+// Ensure data directory and users.json file exist
+function ensureStorage() {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+  if (!fs.existsSync(USERS_FILE)) {
+    fs.writeFileSync(USERS_FILE, JSON.stringify([], null, 2), 'utf-8');
+  }
+}
+
+// Read all users from disk
+function getAllUsers() {
+  ensureStorage();
+  try {
+    const raw = fs.readFileSync(USERS_FILE, 'utf-8');
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error('[User Model] Error reading users file:', err.message);
+    return [];
+  }
+}
+
+// Save all users to disk safely
+function saveAllUsers(users) {
+  ensureStorage();
+  const tmpFile = USERS_FILE + '.tmp';
+  fs.writeFileSync(tmpFile, JSON.stringify(users, null, 2), 'utf-8');
+  fs.renameSync(tmpFile, USERS_FILE);
+}
+
+// User helper methods
+const User = {
+  // Find a user by lowercase email
+  findByEmail(email) {
+    if (!email) return null;
+    const cleanEmail = String(email).trim().toLowerCase();
+    const users = getAllUsers();
+    return users.find(u => u.email.toLowerCase() === cleanEmail) || null;
+  },
+
+  // Find a user by ID
+  findById(id) {
+    if (!id) return null;
+    const users = getAllUsers();
+    return users.find(u => u.id === id) || null;
+  },
+
+  // Create a new user with hashed password
+  async create({ name, email, password }) {
+    ensureStorage();
+    const cleanName = String(name).trim();
+    const cleanEmail = String(email).trim().toLowerCase();
+
+    // Hash password with bcryptjs (salt rounds = 10)
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const newUser = {
+      id: crypto.randomUUID ? crypto.randomUUID() : 'usr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9),
+      name: cleanName,
+      email: cleanEmail,
+      password: hashedPassword,
+      createdAt: new Date().toISOString(),
+    };
+
+    const users = getAllUsers();
+    users.push(newUser);
+    saveAllUsers(users);
+
+    return User.sanitize(newUser);
+  },
+
+  // Compare plaintext password with hashed password
+  async comparePassword(candidatePassword, hashedPassword) {
+    if (!candidatePassword || !hashedPassword) return false;
+    return bcrypt.compare(candidatePassword, hashedPassword);
+  },
+
+  // Sanitize user object to never expose password
+  sanitize(user) {
+    if (!user) return null;
+    const { password, ...safeUser } = user;
+    return safeUser;
+  },
+};
+
+module.exports = User;

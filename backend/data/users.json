@@ -1,0 +1,37 @@
+[
+  {
+    "id": "1849c9a8-04f6-40c6-9eb3-7f851e6f6c83",
+    "name": "Ajay Kumar",
+    "email": "ajay@example.com",
+    "password": "$2b$10$BqfeSwJqBmd0TM8lw5HAuerWCSbuMozhO34KY78TLnDyCR4bVSctm",
+    "createdAt": "2026-10-05T16:03:38.984Z"
+  },
+  {
+    "id": "5b85570a-ca69-4ccd-bc92-1a7a5635f010",
+    "name": "Test Student",
+    "email": "student_1791216513582@example.com",
+    "password": "$2b$10$wT3cAEC2iFzYkBX.vogkauubvIKQ7MNENx5yHbw695N.xB/zDEOcO",
+    "createdAt": "2026-10-05T16:08:33.660Z"
+  },
+  {
+    "id": "a60ed1f7-8beb-4e8e-a743-38f98b3b8940",
+    "name": "Ajay",
+    "email": "ajaykumarkr@gmail.com",
+    "password": "$2b$10$Zlsbe2t7v0AVn7shVUt5MehYt5bZF0ZnfAfTU2DoM1xHnjtkoiLn6",
+    "createdAt": "2026-10-05T16:15:01.333Z"
+  },
+  {
+    "id": "343b7925-a9b7-4945-84a4-f01892fa1a9a",
+    "name": "Lab Professor",
+    "email": "prof_1791217615453@university.edu",
+    "password": "$2b$10$uLXsEIQKaz1KGxL68x.T9OgL8y2pwE2uyVp1NRLuZa4X6Ad1Aa9LO",
+    "createdAt": "2026-10-05T16:26:55.509Z"
+  },
+  {
+    "id": "7a81651a-19b8-49db-967b-46d94072e09a",
+    "name": "Test User",
+    "email": "test@example.com",
+    "password": "$2b$10$hp1tL4ToXjOg8C1yLwLoFeSqOmicG6ttz8vHWmnPvzE88Mucaz5lq",
+    "createdAt": "2026-10-05T16:58:17.567Z"
+  }
+]
